@@ -1,0 +1,27 @@
+{
+  "mode": "fixed",
+  "schedule": "forced",
+  "capacity": 1,
+  "clients": 2,
+  "remaining": 0,
+  "booked": [
+    2
+  ],
+  "replies": [
+    "full",
+    "ok"
+  ],
+  "safe": true,
+  "trace": [
+    "send c1",
+    "send c2",
+    "dispatch c1",
+    "dispatch c2",
+    "check c1: remaining=1, eligible=True",
+    "check c2: remaining=1, eligible=True",
+    "commit c2: remaining=0",
+    "recheck c1: full",
+    "receive c2: ok",
+    "receive c1: full"
+  ]
+}

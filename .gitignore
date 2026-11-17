@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+.direnv/
+.pytest_cache/
+.DS_Store
+models/states/
+/result
+/result-*
+/tools/tla2tools.jar
+/vericoding-workshop.zip

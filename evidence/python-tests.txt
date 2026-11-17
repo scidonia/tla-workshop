@@ -1,0 +1,10 @@
+test_capacity_and_client_matrix (test_reservation.ReservationTests.test_capacity_and_client_matrix) ... ok
+test_empty_stock (test_reservation.ReservationTests.test_empty_stock) ... ok
+test_fix_survives_same_schedule (test_reservation.ReservationTests.test_fix_survives_same_schedule) ... ok
+test_forced_schedule_exposes_bug (test_reservation.ReservationTests.test_forced_schedule_exposes_bug) ... ok
+test_sequential_tests_miss_the_bug (test_reservation.ReservationTests.test_sequential_tests_miss_the_bug) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.047s
+
+OK
