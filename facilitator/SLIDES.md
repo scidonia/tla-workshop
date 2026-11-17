@@ -176,12 +176,16 @@ TLC explores reachable states and checks the invariants.
 Notation | Read it as
 --- | ---
 x' | x in the next state
-/\   and   \/ | and   /   or
+/\   \/   ~ | and   /   or   /   not
 UNCHANGED x | x keeps its current value
 [c \in Clients |-> value] | A function indexed by client
+[f EXCEPT ![c] = v] | f with c mapped to v
+\E c \in S : P   /   \A c \in S : P | some / every c in S satisfies P
+IF P THEN a ELSE b | conditional expression
+Cardinality(S) | number of elements in S
 Append(q, c), Head(q), Tail(q) | FIFO sequence operations
 
-**Speaker notes:** Type the backslash operators in an editor while explaining. A disabled guard is not an exception. Function update syntax uses EXCEPT; the model provides examples. Source: https://learntla.com/
+**Speaker notes:** Read the table left to right. `!` in `EXCEPT` marks the update path, not negation; negation is `~`. `EXCEPT` builds a new function and does not mutate. `\E` is "there exists"; `\A` is "for all". `IF ... THEN ... ELSE ...` is an expression. `Cardinality(S)` counts a finite set. `<<a, b>>` is a tuple, used by `UNCHANGED <<x, y>>`. `[Next]_vars` means a `Next` step or a stutter step. `LET x == e IN P` introduces a local definition. `#` means not equal; `\cup` is set union; `\subseteq` is subset. A guard is a conjunct that must hold for the action to be enabled; a disabled action is not an error. Source: https://learntla.com/
 
 ## 14. The model’s state
 
@@ -210,7 +214,7 @@ Send(c) ==
                    workerPC, reply, result>>
 ```
 
-**Speaker notes:** Read each conjunct. The first is a guard. Two variables change and all others are constrained to stay equal. TLA+ does not implicitly preserve variables omitted from an action.
+**Speaker notes:** Read each conjunct. The first is a guard. Two variables change and all others are constrained to stay equal. TLA+ does not implicitly preserve variables omitted from an action. Syntax: `[f EXCEPT ![c] = v]` evaluates to a new function; `<<a, b>>` is a tuple; `UNCHANGED <<x, y>>` says both variables keep their values. `/\` is conjunction.
 
 ## 16. The crucial action boundary
 
@@ -373,7 +377,7 @@ Commit(c) ==
           ELSE ... preserve stock, publish full ...
 ```
 
-**Speaker notes:** This slide is an abbreviated excerpt, not a runnable replacement. Open the complete action in Reservation.tla. Inspect the unchanged variables and reply branch. Do not just change the config and assume the code matches.
+**Speaker notes:** This slide is an abbreviated excerpt, not a runnable replacement. Open the complete action in Reservation.tla. Inspect the unchanged variables and reply branch. Do not just change the config and assume the code matches. Syntax: `~` is not; `\/` is or; `IF ... THEN ... ELSE ...` is an expression; `...` marks elided actions.
 
 ## 28. The same schedule after repair
 
@@ -456,7 +460,7 @@ FairSpec adds weak fairness to
 dispatch and each per-client action.
 ```
 
-**Speaker notes:** Run python3 tools/run_tlc.py live if relevant. Weak fairness of Commit represents the audit eventually completing when a handler awaits it. Remove fairness to expose indefinite stuttering. Safety required no such assumption. Source: https://learntla.com/
+**Speaker notes:** Run python3 tools/run_tlc.py live if relevant. Weak fairness of Commit represents the audit eventually completing when a handler awaits it. Remove fairness to expose indefinite stuttering. Safety required no such assumption. Syntax: `[][Next]_vars` means every step satisfies Next or stutters; `<>Done` means Done eventually; `WF_vars(A)` is weak fairness for action A. Source: https://learntla.com/
 
 ## 34. Optional: the lock alternative
 

@@ -218,8 +218,8 @@
         "x in the next state"
       ],
       [
-        "/\\   and   \\/",
-        "and   /   or"
+        "/\\   \\/   ~",
+        "and   /   or   /   not"
       ],
       [
         "UNCHANGED x",
@@ -230,11 +230,27 @@
         "A function indexed by client"
       ],
       [
+        "[f EXCEPT ![c] = v]",
+        "f with c mapped to v"
+      ],
+      [
+        "\\E c \\in S : P   /   \\A c \\in S : P",
+        "some / every c in S satisfies P"
+      ],
+      [
+        "IF P THEN a ELSE b",
+        "conditional expression"
+      ],
+      [
+        "Cardinality(S)",
+        "number of elements in S"
+      ],
+      [
         "Append(q, c), Head(q), Tail(q)",
         "FIFO sequence operations"
       ]
     ],
-    "notes": "Type the backslash operators in an editor while explaining. A disabled guard is not an exception. Function update syntax uses EXCEPT; the model provides examples. Source: https://learntla.com/",
+    "notes": "Read the table left to right. `!` in `EXCEPT` marks the update path, not negation; negation is `~`. `EXCEPT` builds a new function and does not mutate. `\\E` means there exists; `\\A` means for all. `IF ... THEN ... ELSE ...` is an expression. `Cardinality(S)` counts a finite set. `<<a, b>>` is a tuple, used by `UNCHANGED <<x, y>>`. `[Next]_vars` means a `Next` step or a stutter step. `LET x == e IN P` introduces a local definition. `#` means not equal; `\\cup` is set union; `\\subseteq` is subset. A guard is a conjunct that must hold for the action to be enabled; a disabled action is not an error. Source: https://learntla.com/",
     "time": "43\u201346",
     "accent": false
   },
@@ -273,7 +289,7 @@
     "body": "",
     "code": "Send(c) ==\n    /\\ clientPC[c] = \"ready\"\n    /\\ requests' = Append(requests, c)\n    /\\ clientPC' =\n           [clientPC EXCEPT ![c] = \"waiting\"]\n    /\\ UNCHANGED <<remaining, booked,\n                   workerPC, reply, result>>",
     "table": null,
-    "notes": "Read each conjunct. The first is a guard. Two variables change and all others are constrained to stay equal. TLA+ does not implicitly preserve variables omitted from an action.",
+    "notes": "Read each conjunct. The first is a guard. Two variables change and all others are constrained to stay equal. TLA+ does not implicitly preserve variables omitted from an action. Syntax: [f EXCEPT ![c] = v] evaluates to a new function; <<a, b>> is a tuple; UNCHANGED <<x, y>> says both variables keep their values. /\\ is conjunction.",
     "time": "49\u201352",
     "accent": false
   },
@@ -456,7 +472,7 @@
     "body": "Fixed = FALSE preserves the bug.\nFixed = TRUE checks stock at commit.",
     "code": "Commit(c) ==\n    /\\ workerPC[c] = \"audit\"\n    /\\ IF ~Fixed \\/ remaining > 0\n          THEN ... reserve and publish ok ...\n          ELSE ... preserve stock, publish full ...",
     "table": null,
-    "notes": "This slide is an abbreviated excerpt, not a runnable replacement. Open the complete action in Reservation.tla. Inspect the unchanged variables and reply branch. Do not just change the config and assume the code matches.",
+    "notes": "This slide is an abbreviated excerpt, not a runnable replacement. Open the complete action in Reservation.tla. Inspect the unchanged variables and reply branch. Do not just change the config and assume the code matches. Syntax: ~ is not; \\/ is or; IF ... THEN ... ELSE ... is an expression; ... marks elided actions.",
     "time": "102\u2013105",
     "accent": false
   },
@@ -531,7 +547,7 @@
     "body": "Eventual response assumes audit completion and scheduling.",
     "code": "Spec == Init /\\ [][Next]_vars\n\nAllReplied == <>Done\n\nFairSpec adds weak fairness to\ndispatch and each per-client action.",
     "table": null,
-    "notes": "Run python3 tools/run_tlc.py live if relevant. Weak fairness of Commit represents the audit eventually completing when a handler awaits it. Remove fairness to expose indefinite stuttering. Safety required no such assumption. Source: https://learntla.com/",
+    "notes": "Run python3 tools/run_tlc.py live if relevant. Weak fairness of Commit represents the audit eventually completing when a handler awaits it. Remove fairness to expose indefinite stuttering. Safety required no such assumption. Syntax: [][Next]_vars means every step satisfies Next or stutters; <>Done means Done eventually; WF_vars(A) is weak fairness for action A. Source: https://learntla.com/",
     "time": "Q&A",
     "accent": false
   },
