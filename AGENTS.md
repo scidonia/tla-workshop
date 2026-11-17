@@ -12,23 +12,15 @@ The shell provides Python 3.12, Java 21, and `TLA_JAR` pointing at the pinned
 TLA+ tools 1.7.4 jar from nixpkgs. Outside Nix, `SETUP.md` documents the
 Python, Java, and jar-download route.
 
-## Branches
-
-- `main` is the participant and LLM task branch. It does not contain the
-  reference TLA+ model or the facilitator answer key.
-- `reference` adds the reference model, TLC configurations and runner, TLC
-  evidence, facilitator materials, and outline; its flake check runs both the
-  Python suite and the TLC cases.
-
 ## Tests
 
 - Python standard-library `unittest` only. Do not add third-party Python
   dependencies or a second test runner.
-- On `main`, run the Python suite:
+- Run the Python suite:
   `nix develop -c python3 -m unittest discover -s code -v`
-- On `reference`, also run:
+- Run all TLC configurations:
   `nix develop -c python3 tools/run_tlc.py all`
-- Run the branch's flake check:
+- Run both through the flake check:
   `nix build .#checks.<system>.default` (for example
   `nix build .#checks.x86_64-linux.default`)
 - The buggy TLC case is expected to violate `NoOversell`; `run_tlc.py` treats
@@ -39,16 +31,16 @@ Python, Java, and jar-download route.
 
 - `code/` contains the learner program, the reference implementation, and the
   regression tests.
-- `exercises/` contains the workbook and extraction prompt. Those are the
-  task inputs for an LLM attempt.
-- The `reference` branch contains `models/`, `tools/run_tlc.py`,
-  `facilitator/`, `OUTLINE.md`, and the TLC evidence.
+- `models/` contains the TLA+ module and its TLC configurations.
+- `tools/run_tlc.py` invokes TLC and writes logs to `evidence/`.
+- `facilitator/vericoding-slides.pptx` is the editable deck;
+  `facilitator/slides.json` and `facilitator/SLIDES.md` carry its content.
 
 ## Generated files
 
 `code/__pycache__/`, `models/states/`, `.direnv/`, and
-`tools/tla2tools.jar` are not committed. `evidence/tlc-*.txt` on `reference`
-are committed snapshots; re-running `run_tlc.py` rewrites them.
+`tools/tla2tools.jar` are not committed. `evidence/tlc-*.txt` are committed
+snapshots; re-running `run_tlc.py` rewrites them.
 
 ## Licensing
 

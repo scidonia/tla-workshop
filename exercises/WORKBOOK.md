@@ -1,7 +1,5 @@
 # Participant workbook
 
-> This is the participant and LLM task branch. The reference model, TLC runner, TLC evidence, facilitator guide, slides, and outline are on the `reference` branch. Commands below that name those files apply to that checkout; otherwise write your own model and run TLC directly.
-
 ## Exercise 1: two clients, one ticket (15 minutes)
 
 Read `SPEC.md` and `code/starter.py`. Before running it, predict the results for sequential and concurrent requests.

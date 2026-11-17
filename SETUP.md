@@ -2,8 +2,6 @@
 
 Run commands from the repository root. Python code uses the standard library only.
 
-This is the `main` participant and LLM task branch. The reference TLA+ model, TLC runner, TLC evidence, facilitator materials, and outline are on the `reference` branch.
-
 ## Requirements
 
 - Python 3.11 or later. On Windows substitute `py -3` for `python3`.
@@ -12,7 +10,7 @@ This is the `main` participant and LLM task branch. The reference TLA+ model, TL
 - Optional: Nix with flakes, which provides Python, Java, and the pinned jar.
 - Optional: VS Code with the TLA+ extension. CLI commands below are the reference route.
 
-This repository does not commit `tools/tla2tools.jar`. With Nix, `nix develop` sets `TLA_JAR` to the pinned TLA+ tools 1.7.4 jar from nixpkgs. Without Nix, download the jar into `tools/tla2tools.jar` and verify its hash. On the `reference` branch, the runner also honours an absolute `TLA_JAR` path; other versions may report different counts or traces.
+This repository does not commit `tools/tla2tools.jar`. With Nix, `nix develop` sets `TLA_JAR` to the pinned TLA+ tools 1.7.4 jar from nixpkgs. Without Nix, download the jar into `tools/tla2tools.jar` and verify its hash. The runner also honours an absolute `TLA_JAR` path; other versions may report different counts or traces.
 
 To download the pinned jar:
 
@@ -49,17 +47,16 @@ python3 code/starter.py --schedule sequential
 python3 code/starter.py --schedule forced
 python3 code/reservation.py --mode fixed --schedule forced
 python3 -m unittest discover -s code -v
+python3 tools/run_tlc.py all
 ```
 
-Run the TLC cases on the `reference` branch: `python3 tools/run_tlc.py all`.
+The same checks are available as a flake check: `nix build .#checks.<system>.default`, for example `nix build .#checks.x86_64-linux.default`.
 
-The same Python checks are available as a flake check: `nix build .#checks.<system>.default`, for example `nix build .#checks.x86_64-linux.default`. The `reference` branch's check also runs the TLC cases.
-
-`starter.py --schedule forced` should print `OVERSOLD`. This is an expected demonstration, not a setup error. Its exit code is zero because the outcome is returned as data. Tests assert that the buggy case fails its safety predicate. On the `reference` branch, `run_tlc.py` verifies the expected invariant failure for the buggy case and exits nonzero on unexpected output.
+`starter.py --schedule forced` should print `OVERSOLD`. This is an expected demonstration, not a setup error. Its exit code is zero because the outcome is returned as data. Tests assert that the buggy case fails its safety predicate. `run_tlc.py` verifies the expected invariant failure for the buggy case and exits nonzero on unexpected output.
 
 ### Raw TLC commands
 
-On the `reference` branch, from `models/`:
+From `models/`:
 
 ```sh
 java -cp ../tools/tla2tools.jar tlc2.TLC -workers 1 -config buggy.cfg Reservation.tla
@@ -68,15 +65,13 @@ java -cp ../tools/tla2tools.jar tlc2.TLC -workers 1 -config fixed-3clients.cfg R
 java -cp ../tools/tla2tools.jar tlc2.TLC -workers 1 -config live.cfg Reservation.tla
 ```
 
-On `main`, write your own module and configuration and invoke TLC directly.
-
 Inside `nix develop`, substitute `"$TLA_JAR"` for `../tools/tla2tools.jar`.
 
 The first raw command intentionally returns an invariant error. Do not chain it with `&&` and assume later commands will run. The runner handles expected failure explicitly.
 
 ### VS Code
 
-On the `reference` branch, open `models/Reservation.tla`. Use the extension's model-check command and select the intended `.cfg` when prompted. If configuration selection differs in your extension release, use the raw CLI. Do not accidentally check `fixed.cfg` while demonstrating the bug.
+Open `models/Reservation.tla`. Use the extension's model-check command and select the intended `.cfg` when prompted. If configuration selection differs in your extension release, use the raw CLI. Do not accidentally check `fixed.cfg` while demonstrating the bug.
 
 ## Schedule modes
 
@@ -88,4 +83,4 @@ The gate lives in the test audit dependency. The service is not repaired by the 
 
 ## Offline and troubleshooting
 
-No LLM is required. Use the reference model from the `reference` branch after attempting the worksheet. Once the jar is present, TLC is available offline. Python's ten-second watchdog reports mistakes such as a stranded gate instead of hanging the workshop. If Java fails, use saved TLC output while the facilitator runs the model. TLC writes disposable state directories; the runner uses a temporary metadata directory.
+No LLM is required. Use the reference model after attempting the worksheet. Once the jar is present, TLC is available offline. Python's ten-second watchdog reports mistakes such as a stranded gate instead of hanging the workshop. If Java fails, use saved TLC output while the facilitator runs the model. TLC writes disposable state directories; the runner uses a temporary metadata directory.

@@ -20,12 +20,15 @@
 
       checks = forAllSystems (pkgs: {
         default = pkgs.runCommand "tla-workshop-check" {
-          nativeBuildInputs = [ pkgs.python312 ];
+          nativeBuildInputs = [ pkgs.python312 pkgs.jdk21 ];
+          TLA_JAR = tlaJar pkgs;
         } ''
           cp -r ${self} work
           chmod -R u+w work
           cd work
+          export HOME="$TMPDIR"
           python3 -m unittest discover -s code -v
+          python3 tools/run_tlc.py all
           touch $out
         '';
       });

@@ -10,7 +10,7 @@ All example code, models and teaching prose in this pack are authored for this w
 - TLA+ learning material: https://lamport.azurewebsites.net/video/videos.html
 - Learn TLA+: https://learntla.com/
 
-The model was authored directly in TLA+, not obtained by running an LLM extraction experiment. The `reference` branch contains the model. The prompt supports that workshop experiment. `evidence/` on `main` records the Python runs; the TLC evidence is on `reference`. Do not interpret the prompt or reference answer as evidence that a particular LLM reliably extracts correct models.
+The model was authored directly in TLA+, not obtained by running an LLM extraction experiment. The prompt supports that workshop experiment. Evidence files record the actual Python and TLC runs performed while preparing the pack. Do not interpret the prompt or reference answer as evidence that a particular LLM reliably extracts correct models.
 
 The TLA+ tools are third-party software. This repository does not distribute the jar; see `THIRD_PARTY_NOTICES.md`, `tools/TLA-TOOLS-LICENSE.txt`, and the release source for their licences and notices.
 

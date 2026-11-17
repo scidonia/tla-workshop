@@ -1,0 +1,556 @@
+[
+  {
+    "title": "Vericoding: Getting It Right!",
+    "body": "Finding a Python concurrency bug with TLA+\n\nTwo-hour workshop + 45-minute discussion",
+    "code": null,
+    "table": null,
+    "notes": "Welcome. This session assumes Python familiarity but no TLA+ background. Tools should already be installed. We will connect one implementation bug to a model counterexample and then a repair.",
+    "time": "00\u201302",
+    "accent": true
+  },
+  {
+    "title": "One ticket. Two clients.",
+    "body": "A community workshop has one place left.\n\nTwo clients request that place.\n\nWhat outcomes should the server permit?",
+    "code": null,
+    "table": null,
+    "notes": "Ask the audience before showing code. Either client may win. Two successes violate the business requirement. The audit is diagnostic, not payment. Keep the scenario concrete.",
+    "time": "02\u201305",
+    "accent": false
+  },
+  {
+    "title": "The service contract",
+    "body": "*Assuming the service, clients and audit continue to make progress.",
+    "code": null,
+    "table": [
+      [
+        "Property",
+        "Requirement"
+      ],
+      [
+        "No overselling",
+        "Bookings never exceed capacity"
+      ],
+      [
+        "Stock",
+        "Remaining tickets never become negative"
+      ],
+      [
+        "Replies",
+        "An ok reply corresponds to a booking"
+      ],
+      [
+        "Progress",
+        "Every request eventually gets a reply*"
+      ]
+    ],
+    "notes": "SPEC.md contains the full contract, including accounting and justified rejection. Distinguish safety from eventual response. Do not promise completion without environmental assumptions.",
+    "time": "05\u201308",
+    "accent": false
+  },
+  {
+    "title": "Today\u2019s investigation",
+    "body": "",
+    "code": null,
+    "table": [
+      [
+        "Minutes",
+        "Activity"
+      ],
+      [
+        "00\u201340",
+        "Python, sequential tests and the race"
+      ],
+      [
+        "40\u201360",
+        "TLA+ essentials and a short break"
+      ],
+      [
+        "60\u201395",
+        "Extract, review and model-check"
+      ],
+      [
+        "95\u2013120",
+        "Repair, retest and qualify the result"
+      ],
+      [
+        "120\u2013165",
+        "Questions and extensions"
+      ]
+    ],
+    "notes": "Give pairs the pack. The first two hours include exercises and a five-minute break. There is a separate 45-minute discussion. The reference model is available if an LLM or installation fails.",
+    "time": "08\u201310",
+    "accent": false
+  },
+  {
+    "title": "A server inside one process",
+    "body": "",
+    "code": null,
+    "table": [
+      [
+        "Component",
+        "Role"
+      ],
+      [
+        "Clients",
+        "Send one request each"
+      ],
+      [
+        "Request queue",
+        "Reliable, unbounded FIFO"
+      ],
+      [
+        "Dispatcher",
+        "Start a handler for each request"
+      ],
+      [
+        "Handlers",
+        "Share inventory and await audit"
+      ],
+      [
+        "Reply queues",
+        "One mailbox per client"
+      ]
+    ],
+    "notes": "This is runnable message-passing architecture, not a socket simulation. The deliberately small transport lets us see channels and guards. No crashes, retries, threads or cancellation. Source: https://docs.python.org/3/library/asyncio-queue.html",
+    "time": "10\u201313",
+    "accent": false
+  },
+  {
+    "title": "The reservation handler",
+    "body": "",
+    "code": "eligible = inventory.remaining > 0\nif eligible:\n    await audit.record_attempt(client)\n    inventory.remaining -= 1\n    inventory.booked.add(client)\n    outcome = \"ok\"\nelse:\n    outcome = \"full\"\nreplies[client].put_nowait(outcome)",
+    "table": null,
+    "notes": "Excerpt from code/starter.py, with tracing removed. Ask which objects are shared and which values are local. eligible records an earlier observation. Do not reveal the repair yet.",
+    "time": "13\u201317",
+    "accent": false
+  },
+  {
+    "title": "Where another task can run",
+    "body": "The availability check reads shared stock.\n\nThe audit call can suspend this handler.\n\nAnother handler can change stock before this one resumes.",
+    "code": null,
+    "table": null,
+    "notes": "Use the exact audit stub in the source. asyncio.sleep(0) deliberately yields. Not every await must suspend, but this one can. Synchronous check/update spans do not yield to another task in the stated environment. Source: https://docs.python.org/3/library/asyncio-task.html",
+    "time": "17\u201321",
+    "accent": false
+  },
+  {
+    "title": "The sequential test passes",
+    "body": "",
+    "code": "python3 code/starter.py --schedule sequential\n\ncheck c1: remaining=1, eligible=True\ncommit c1: remaining=0\ncheck c2: remaining=0, eligible=False\n\nreplies=[\"ok\", \"full\"]\nSAFE",
+    "table": null,
+    "notes": "Run the real command. The slide abbreviates the full trace and uses JSON-style quote marks for readability. Ask what schedules this test never exercised. A passing test is useful evidence but only for the tested execution.",
+    "time": "21\u201325",
+    "accent": false
+  },
+  {
+    "title": "Exercise 1: force the race",
+    "body": "Predict first. Then run.\nRecord both checks and both commits.\nWhich requirement fails?",
+    "code": "python3 code/starter.py --schedule forced",
+    "table": null,
+    "notes": "Allow pairs about six minutes before debriefing. The test audit waits until all clients have arrived before releasing them. The model later abstracts arbitrary audit completion instead of carrying this test gate.",
+    "time": "25\u201331",
+    "accent": true
+  },
+  {
+    "title": "Both clients saw one ticket",
+    "body": "The successful check becomes stale while the handler awaits audit.",
+    "code": null,
+    "table": [
+      [
+        "Operation",
+        "Remaining",
+        "Bookings"
+      ],
+      [
+        "Client A checks",
+        "1",
+        "0"
+      ],
+      [
+        "Client B checks",
+        "1",
+        "0"
+      ],
+      [
+        "Client A commits",
+        "0",
+        "1"
+      ],
+      [
+        "Client B commits",
+        "\u22121",
+        "2"
+      ]
+    ],
+    "notes": "Client names are illustrative; the supplied forced Python run normally releases the second arriver first. The winner is not specified. This is a check-then-act race, not a lost-update example.",
+    "time": "31\u201336",
+    "accent": false
+  },
+  {
+    "title": "Accounting can still look right",
+    "body": "Conservation alone does not forbid overselling.",
+    "code": "remaining + number_of_bookings == capacity\n\n       -1 + 2 == 1",
+    "table": null,
+    "notes": "Ask whether the accounting invariant catches the failure. It does not. Both NoOversell and StockNonnegative express constraints that accounting alone misses. This motivates deriving properties from the actual requirement.",
+    "time": "36\u201340",
+    "accent": false
+  },
+  {
+    "title": "TLA+: states and actions",
+    "body": "A state assigns values to variables.\n\nAn action relates a state to its possible next states.\n\nTLC explores reachable states and checks the invariants.",
+    "code": null,
+    "table": null,
+    "notes": "Avoid teaching all of temporal logic. Explain that actions are predicates rather than imperative functions. TLC checks the finite configured model. Source: https://github.com/tlaplus/tlaplus/blob/master/USE.md",
+    "time": "40\u201343",
+    "accent": false
+  },
+  {
+    "title": "Notation for this workshop",
+    "body": "",
+    "code": null,
+    "table": [
+      [
+        "Notation",
+        "Read it as"
+      ],
+      [
+        "x'",
+        "x in the next state"
+      ],
+      [
+        "/\\   and   \\/",
+        "and   /   or"
+      ],
+      [
+        "UNCHANGED x",
+        "x keeps its current value"
+      ],
+      [
+        "[c \\in Clients |-> value]",
+        "A function indexed by client"
+      ],
+      [
+        "Append(q, c), Head(q), Tail(q)",
+        "FIFO sequence operations"
+      ]
+    ],
+    "notes": "Type the backslash operators in an editor while explaining. A disabled guard is not an exception. Function update syntax uses EXCEPT; the model provides examples. Source: https://learntla.com/",
+    "time": "43\u201346",
+    "accent": false
+  },
+  {
+    "title": "The model\u2019s state",
+    "body": "",
+    "code": null,
+    "table": [
+      [
+        "Variable",
+        "Meaning"
+      ],
+      [
+        "remaining, booked",
+        "Shared stock and successful client IDs"
+      ],
+      [
+        "requests",
+        "FIFO sequence of client IDs"
+      ],
+      [
+        "clientPC, workerPC",
+        "Per-client control phases"
+      ],
+      [
+        "reply, result",
+        "Pending reply and consumed outcome"
+      ]
+    ],
+    "notes": "A set of booked IDs supports reply identity checks. One reply slot per client is sufficient only because the exercise allows one request per client. workerPC=audit remembers a successful check without an extra eligible variable.",
+    "time": "46\u201349",
+    "accent": false
+  },
+  {
+    "title": "One complete action",
+    "body": "",
+    "code": "Send(c) ==\n    /\\ clientPC[c] = \"ready\"\n    /\\ requests' = Append(requests, c)\n    /\\ clientPC' =\n           [clientPC EXCEPT ![c] = \"waiting\"]\n    /\\ UNCHANGED <<remaining, booked,\n                   workerPC, reply, result>>",
+    "table": null,
+    "notes": "Read each conjunct. The first is a guard. Two variables change and all others are constrained to stay equal. TLA+ does not implicitly preserve variables omitted from an action.",
+    "time": "49\u201352",
+    "accent": false
+  },
+  {
+    "title": "The crucial action boundary",
+    "body": "Check reads availability and enters the audit phase.\n\nCommit resumes after audit and allocates the ticket.\n\nThe model must preserve the state between them.",
+    "code": null,
+    "table": null,
+    "notes": "An atomic reserve model would encode a stronger implementation. Check and Commit must be separate because another handler can act during audit. Commit includes reply publication because there is no further await before put_nowait.",
+    "time": "52\u201355",
+    "accent": false
+  },
+  {
+    "title": "Five-minute break",
+    "body": "Resume at minute 60\n\nNext: extract the model from code and requirements",
+    "code": null,
+    "table": null,
+    "notes": "Use this break to help pairs whose tooling failed. Prepare the LLM prompt and reference model, but do not overwrite participant drafts.",
+    "time": "55\u201360",
+    "accent": true
+  },
+  {
+    "title": "Exercise 2: extraction",
+    "body": "Input: SPEC.md + code/starter.py\n\nOutput: state, guards, atomic actions, channels\n\nThen a runnable TLA+ module and configuration",
+    "code": null,
+    "table": null,
+    "notes": "Use exercises/LLM_PROMPT.md. Give three minutes for the state table, five for drafting, seven for review and five to reconcile. No LLM access is needed: pairs can use the worksheet and reference skeleton.",
+    "time": "60\u201363",
+    "accent": true
+  },
+  {
+    "title": "A repeatable LLM prompt",
+    "body": "Preserve the actual implementation, including mistakes.\n\nExplain each atomic action with a code span.\n\nKeep requirements as independent invariants.\n\nList every abstraction and environmental assumption.",
+    "code": null,
+    "table": null,
+    "notes": "The full copyable prompt is in the pack. Save the exact input and model version. This pack has not measured an extraction success rate. Repeatability concerns the controlled inputs and review procedure, not identical generated text.",
+    "time": "63\u201368",
+    "accent": false
+  },
+  {
+    "title": "The model review",
+    "body": "",
+    "code": null,
+    "table": [
+      [
+        "Check",
+        "Failure to reject"
+      ],
+      [
+        "Atomicity",
+        "Check and commit merged"
+      ],
+      [
+        "Guard fidelity",
+        "Fresh stock check invented"
+      ],
+      [
+        "Channels",
+        "FIFO silently becomes an unordered set"
+      ],
+      [
+        "Next-state values",
+        "Variables left unconstrained"
+      ],
+      [
+        "Requirements",
+        "NoOversell inserted as an action guard"
+      ]
+    ],
+    "notes": "Have pairs exchange drafts. A green result for the wrong model is not useful. Correct parser errors without casually changing semantics. The rubric has ten rows and explicit critical checks.",
+    "time": "68\u201375",
+    "accent": false
+  },
+  {
+    "title": "The reference action map",
+    "body": "",
+    "code": null,
+    "table": [
+      [
+        "Code",
+        "TLA+ action"
+      ],
+      [
+        "Client sends request",
+        "Send(c)"
+      ],
+      [
+        "Server creates handler",
+        "Dispatch"
+      ],
+      [
+        "Check, then enter audit await",
+        "Check(c)"
+      ],
+      [
+        "Resume, reserve, publish reply",
+        "Commit(c)"
+      ],
+      [
+        "Client consumes reply",
+        "Receive(c)"
+      ]
+    ],
+    "notes": "Supply the reference now so all pairs can progress. Explain the abstraction of dispatcher scheduling and audit completion. It is not a mechanically verified translation. The test gate is not part of the reference service model.",
+    "time": "75\u201380",
+    "accent": false
+  },
+  {
+    "title": "Exercise 3: run TLC",
+    "body": "Find the first bad state.\nThen work backwards to both successful checks.",
+    "code": "python3 tools/run_tlc.py buggy\n\nError: Invariant NoOversell is violated.",
+    "table": null,
+    "notes": "Actual result from evidence/tlc-buggy.txt. The runner regards this failure as expected. Show the raw log so learners see control state, channels and bookings rather than only the error line.",
+    "time": "80\u201384",
+    "accent": true
+  },
+  {
+    "title": "The checker finds the stale decisions",
+    "body": "Both ok replies exist before either client consumes them.",
+    "code": null,
+    "table": [
+      [
+        "State",
+        "Worker A",
+        "Worker B",
+        "Stock"
+      ],
+      [
+        "After both checks",
+        "audit",
+        "audit",
+        "1"
+      ],
+      [
+        "After first commit",
+        "done",
+        "audit",
+        "0"
+      ],
+      [
+        "After second commit",
+        "done",
+        "done",
+        "\u22121"
+      ]
+    ],
+    "notes": "These rows summarise states 7, 8 and 9 in the recorded TLC trace. The bad state has booked={c1,c2}. Exact client names and search order may vary. A violation at commit is sufficient; we need not wait for reply consumption.",
+    "time": "84\u201390",
+    "accent": false
+  },
+  {
+    "title": "Model counterexample, code witness",
+    "body": "The model permits both checks before either commit.\n\nThe forced audit schedule reproduces that pattern.\n\nReview extra model schedules before accepting other findings.",
+    "code": null,
+    "table": null,
+    "notes": "The abstract scheduler permits more orders than the concrete Python ready queue in some places. We demonstrate this relevant failure in code. This is not a proof of exact trace correspondence, and not every future model counterexample is automatically a real implementation bug.",
+    "time": "90\u201395",
+    "accent": false
+  },
+  {
+    "title": "Exercise 4: repair the boundary",
+    "body": "Keep the asynchronous audit.\n\nCheck current stock after it returns.\n\nPerform the check and update without suspension.",
+    "code": null,
+    "table": null,
+    "notes": "Allow learners to propose a patch before revealing the next slide. Ask what a lock around only the decrement would protect. The key is stale eligibility, not concurrent arithmetic instructions.",
+    "time": "95\u201399",
+    "accent": true
+  },
+  {
+    "title": "The repaired commit",
+    "body": "",
+    "code": "await audit.record_attempt(client)\nif inventory.remaining > 0:\n    inventory.remaining -= 1\n    inventory.booked.add(client)\n    outcome = \"ok\"\nelse:\n    outcome = \"full\"\nreplies[client].put_nowait(outcome)",
+    "table": null,
+    "notes": "Excerpt of the post-audit repair. The initial availability check remains in the complete program. This is atomic only relative to other tasks on the one event loop with no await in the check/update span. A multi-process database deployment requires a different argument.",
+    "time": "99\u2013102",
+    "accent": false
+  },
+  {
+    "title": "One model change",
+    "body": "Fixed = FALSE preserves the bug.\nFixed = TRUE checks stock at commit.",
+    "code": "Commit(c) ==\n    /\\ workerPC[c] = \"audit\"\n    /\\ IF ~Fixed \\/ remaining > 0\n          THEN ... reserve and publish ok ...\n          ELSE ... preserve stock, publish full ...",
+    "table": null,
+    "notes": "This slide is an abbreviated excerpt, not a runnable replacement. Open the complete action in Reservation.tla. Inspect the unchanged variables and reply branch. Do not just change the config and assume the code matches.",
+    "time": "102\u2013105",
+    "accent": false
+  },
+  {
+    "title": "The same schedule after repair",
+    "body": "One ok reply. One full reply. Stock zero.",
+    "code": "python3 code/reservation.py --mode fixed\npython3 tools/run_tlc.py fixed\npython3 tools/run_tlc.py fixed-3clients\npython3 -m unittest discover -s code -v",
+    "table": null,
+    "notes": "The default schedule is forced, clients=2, capacity=1. Also run each learner\u2019s edited starter: the provided regression tests exercise the reference file, not their patch. Either client may win.",
+    "time": "105\u2013110",
+    "accent": false
+  },
+  {
+    "title": "What we checked",
+    "body": "",
+    "code": null,
+    "table": [
+      [
+        "Configuration",
+        "Observed result"
+      ],
+      [
+        "Buggy: 2 clients, capacity 1",
+        "NoOversell violation"
+      ],
+      [
+        "Fixed: 2 clients, capacity 1",
+        "41 distinct reachable states, no error"
+      ],
+      [
+        "Fixed: 3 clients, capacity 2",
+        "252 distinct reachable states, no error"
+      ],
+      [
+        "Fixed + fairness: 2 clients",
+        "AllReplied checked, no error"
+      ]
+    ],
+    "notes": "Actual preparation runs, TLC tools release v1.7.4, TLC 2.19. See evidence logs. Counts describe these exact configurations and model, not a universal proof. The buggy search stopped at its first violation.",
+    "time": "110\u2013113",
+    "accent": false
+  },
+  {
+    "title": "The remaining obligations",
+    "body": "Review the code-to-model correspondence.\n\nRevisit the model when the environment changes.\n\nFinite instances do not establish arbitrary client counts.\n\nA specification still needs to express the intended service.",
+    "code": null,
+    "table": null,
+    "notes": "Ask participants to name excluded features: retries, crashes, audit failures, cancellation, processes, database isolation, network loss. A useful method can have an explicit scope without claiming end-to-end verification.",
+    "time": "113\u2013115",
+    "accent": false
+  },
+  {
+    "title": "Exit exercise",
+    "body": "Why would atomic Reserve hide this bug?\n\nWhat changes with two server processes?\n\nWhat does our passing TLC run establish?",
+    "code": null,
+    "table": null,
+    "notes": "Collect responses before giving the answers. Good answers identify the intermediate stale-check state, loss of the one-event-loop assumption, and a finite model result rather than a Python correctness theorem.",
+    "time": "115\u2013120",
+    "accent": true
+  },
+  {
+    "title": "Questions and discussion",
+    "body": "The trace and TLA+ notation\n\nModel fidelity and LLM extraction\n\nApplying the method to your systems",
+    "code": null,
+    "table": null,
+    "notes": "45-minute discussion. Suggested split: 15 minutes trace/syntax, 15 minutes model fidelity, 15 minutes applications. The next slides are optional supporting material, not additional required teaching time.",
+    "time": "120\u2013165",
+    "accent": true
+  },
+  {
+    "title": "Optional: safety and progress",
+    "body": "Eventual response assumes audit completion and scheduling.",
+    "code": "Spec == Init /\\ [][Next]_vars\n\nAllReplied == <>Done\n\nFairSpec adds weak fairness to\ndispatch and each per-client action.",
+    "table": null,
+    "notes": "Run python3 tools/run_tlc.py live if relevant. Weak fairness of Commit represents the audit eventually completing when a handler awaits it. Remove fairness to expose indefinite stuttering. Safety required no such assumption. Source: https://learntla.com/",
+    "time": "Q&A",
+    "accent": false
+  },
+  {
+    "title": "Optional: the lock alternative",
+    "body": "A lock around only the write leaves the check stale.\n\nA lock around check and audit serializes the whole operation.\n\nThe all-clients audit gate then needs a different test design.",
+    "code": null,
+    "table": null,
+    "notes": "Source: https://docs.python.org/3/library/asyncio-sync.html. A lock can be a valid repair but the forced test barrier will deadlock if the first handler holds the lock while waiting for all others. Distinguish the production protocol from test instrumentation. A local asyncio lock cannot coordinate separate processes.",
+    "time": "Q&A",
+    "accent": false
+  },
+  {
+    "title": "Optional: the next tutorial",
+    "body": "Retries require request identities and deduplication.\n\nCrashes require recovery and durable state.\n\nA database requires transaction semantics.\n\nEach change adds concrete modelling obligations.",
+    "code": null,
+    "table": null,
+    "notes": "Use participant examples. Avoid promising automatic translation. The reusable workflow is to name the requirement, expose shared state and boundaries, draft a model, review correspondence, inspect a trace, reproduce it and validate a repair. References are in SOURCES.md.",
+    "time": "Q&A",
+    "accent": false
+  }
+]
