@@ -16,6 +16,14 @@ Run the commands from the repository root. With Nix, `nix develop` provides Pyth
 
 The extraction prompt expects only `SPEC.md` and `code/starter.py`; do not attach the `reference` branch to an LLM attempt.
 
+To hand the task to an LLM without the answer, export `main` rather than copying the working directory:
+
+```sh
+git archive main | tar -x -C /path/to/task
+```
+
+Do not clone the repository with the `reference` branch or copy the working directory into the model's workspace.
+
 ### Start here
 
 1. Read `SETUP.md` and run the preflight commands.
